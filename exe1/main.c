@@ -1,35 +1,57 @@
-#include "hardware/gpio.h"
-#include "pico/stdlib.h"
 #include <stdio.h>
+#include "pico/stdlib.h"
+#include "hardware/gpio.h"
+#include "hardware/timer.h"
 
-const int BTN_PIN_R = 28;
-const int LED_PIN_R = 4;
+#define BOTAO_PINO 28
+#define LED_PINO 4
 
-volatile int flag_f_r = 0;
+volatile bool botao_pressionado = false;
+volatile bool timer_init = false;
+volatile bool timer_ativo = false;
+volatile bool led_ligado = false;
 
-void btn_callback(uint gpio, uint32_t events) {
-    if (events == 0x4) { // fall edge
-        flag_f_r = 1;
-    } else if (events == 0x8) { // rise edge
+repeating_timer_t meu_timer;
+
+void botao_callback(uint gpio, uint32_t eventos) {
+    if (eventos & GPIO_IRQ_EDGE_FALL) {
+        botao_pressionado = true;
     }
+}
+
+bool timer_callback(repeating_timer_t *rt) {
+    timer_init = true;
+    return true;
 }
 
 int main() {
     stdio_init_all();
-    gpio_init(LED_PIN_R);
-    gpio_set_dir(LED_PIN_R, GPIO_OUT);
-
-    gpio_init(BTN_PIN_R);
-    gpio_set_dir(BTN_PIN_R, GPIO_IN);
-    gpio_pull_up(BTN_PIN_R);
-
-    gpio_set_irq_enabled_with_callback(BTN_PIN_R, GPIO_IRQ_EDGE_FALL, true,
-                                       &btn_callback);
-
+    gpio_init(LED_PINO);
+    gpio_set_dir(LED_PINO, GPIO_OUT);
+    gpio_put(LED_PINO, 0);
+    gpio_init(BOTAO_PINO);
+    gpio_set_dir(BOTAO_PINO, GPIO_IN);
+    gpio_pull_up(BOTAO_PINO);
+    gpio_set_irq_enabled_with_callback(BOTAO_PINO, GPIO_IRQ_EDGE_FALL, true, &botao_callback);
     while (true) {
-
-        if (flag_f_r) {
-            flag_f_r = 0;
+        if (botao_pressionado) {
+            botao_pressionado = false;
+            if (!timer_ativo) {
+                add_repeating_timer_ms(500, timer_callback, NULL, &meu_timer);
+                timer_ativo = true;
+            } else {
+                cancel_repeating_timer(&meu_timer);
+                timer_ativo = false;
+                led_ligado = false;
+                gpio_put(LED_PINO, led_ligado);
+            }
         }
+        if (timer_init) {
+            timer_init = false;
+            led_ligado = !led_ligado;
+            gpio_put(LED_PINO, led_ligado);
+        }
+        sleep_ms(1);
     }
+    return 0;
 }
