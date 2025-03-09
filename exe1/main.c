@@ -3,8 +3,8 @@
 #include "hardware/gpio.h"
 #include "hardware/timer.h"
 
-const int BOTAO_PINO 28
-const int LED_PINO 4
+const int BOTAO_PINO = 28;
+const int LED_PINO =  4;
 
 volatile int flag_f_r = 0;
 volatile bool timer_init = false;
