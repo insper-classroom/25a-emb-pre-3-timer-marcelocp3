@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include "hardware/timer.h"
@@ -8,10 +7,6 @@
 
 volatile bool botao_pressionado = false;
 volatile bool timer_init = false;
-volatile bool timer_ativo = false;
-volatile bool led_ligado = false;
-
-repeating_timer_t meu_timer;
 
 void botao_callback(uint gpio, uint32_t eventos) {
     if (eventos & GPIO_IRQ_EDGE_FALL) {
@@ -24,15 +19,25 @@ bool timer_callback(repeating_timer_t *rt) {
     return true;
 }
 
-int main() {
+int main(void) {
+    bool timer_ativo = false;
+    bool led_ligado = false;
+    repeating_timer_t meu_timer;
+
     stdio_init_all();
     gpio_init(LED_PINO);
     gpio_set_dir(LED_PINO, GPIO_OUT);
     gpio_put(LED_PINO, 0);
+
     gpio_init(BOTAO_PINO);
     gpio_set_dir(BOTAO_PINO, GPIO_IN);
     gpio_pull_up(BOTAO_PINO);
-    gpio_set_irq_enabled_with_callback(BOTAO_PINO, GPIO_IRQ_EDGE_FALL, true, &botao_callback);
+
+    gpio_set_irq_enabled_with_callback(BOTAO_PINO,
+                                       GPIO_IRQ_EDGE_FALL,
+                                       true,
+                                       &botao_callback);
+
     while (true) {
         if (botao_pressionado) {
             botao_pressionado = false;
